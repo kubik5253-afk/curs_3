@@ -7,7 +7,14 @@ export default function Level_9({ onNext }) {
   const [userSequence, setUserSequence] = useState([]);
   const timeoutRef = useRef(null);
 
-  const correct = [4, 2, 10];
+  // Генерация уникальной последовательности для текущего уровня
+  const [correctSequence, setCorrectSequence] = useState(() => {
+    const indices = [...Array(25).keys()].sort(() => Math.random() - 0.5);
+    return indices.slice(0, 3); // 3 уникальных индекса для уровня 3
+  });
+
+  const [levelNumber, setLevelNumber] = useState(3); // Начальный уровень
+
   const colors = [
     "#ff5733", "#33ff57", "#3357ff", "#ff33a1", "#a133ff",
     "#33fff5", "#f5ff33", "#ff8c33", "#8c33ff", "#33ff8c",
@@ -16,36 +23,33 @@ export default function Level_9({ onNext }) {
     "#ff3399", "#3399ff", "#99ff33", "#ff6633", "#6633ff"
   ];
 
+  // Отображение последовательности при старте уровня
   useEffect(() => {
-    const color_1 = setTimeout(() => {
-      setSelectedCell(4);
-      setColor("#a133ff");
-    }, 1000);
+    const timeouts = [];
 
-    const color_2 = setTimeout(() => {
-      setSelectedCell(2);
-      setColor("#3357ff");
-    }, 2000);
+    correctSequence.forEach((cell, index) => {
+      timeouts.push(
+        setTimeout(() => {
+          setSelectedCell(cell);
+          setColor(colors[cell]);
+        }, (index + 1) * 1000)
+      );
+    });
 
-    const color_3 = setTimeout(() => {
-      setSelectedCell(10);
-      setColor("#ff3333");
-    }, 3000);
-
-    const color_4 = setTimeout(() => {
-      setSelectedCell(null);
-      setActivClick(true);
-    }, 4000);
+    timeouts.push(
+      setTimeout(() => {
+        setSelectedCell(null);
+        setActivClick(true);
+      }, (correctSequence.length + 1) * 1000)
+    );
 
     return () => {
-      clearTimeout(color_1);
-      clearTimeout(color_2);
-      clearTimeout(color_3);
-      clearTimeout(color_4);
+      timeouts.forEach(clearTimeout);
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, []);
+  }, [correctSequence]);
 
+  // Обработка кликов по ячейкам
   const colorClick = (i) => {
     if (activClick) {
       const newSequence = [...userSequence, i];
@@ -53,22 +57,43 @@ export default function Level_9({ onNext }) {
       setSelectedCell(i);
       setColor(colors[i]);
 
-      const isCorrectUpToNow = newSequence.every((val, index) => val === correct[index]);
+      const isCorrectUpToNow = newSequence.every((val, index) => val === correctSequence[index]);
 
       if (!isCorrectUpToNow) {
+        // Ошибка: сброс уровня к начальному состоянию
         setColor("red");
         timeoutRef.current = setTimeout(() => {
           setSelectedCell(null);
           setColor("#fff");
           setUserSequence([]);
+          
+          // Генерация новой начальной последовательности
+          const indices = [...Array(25).keys()].sort(() => Math.random() - 0.5);
+          const newInitialSequence = indices.slice(0, 3);
+          setCorrectSequence(newInitialSequence);
+          setLevelNumber(3); // Сброс уровня
+          setActivClick(false);
         }, 500);
-      } else if (newSequence.length === correct.length) {
+      } else if (newSequence.length === correctSequence.length) {
+        // Уровень пройден
         timeoutRef.current = setTimeout(() => {
           setSelectedCell(null);
           setColor("#fff");
-          onNext();
+
+          if (levelNumber < 6) {
+            // Генерация новой последовательности для следующего уровня
+            const indices = [...Array(25).keys()].sort(() => Math.random() - 0.5);
+            const newSequence = indices.slice(0, levelNumber + 1);
+            setCorrectSequence(newSequence);
+            setLevelNumber(levelNumber + 1);
+            setUserSequence([]);
+            setActivClick(false);
+          } else {
+            onNext(); // Завершение игры
+          }
         }, 500);
       } else {
+        // Промежуточная проверка
         timeoutRef.current = setTimeout(() => {
           setSelectedCell(null);
           setColor("#fff");
@@ -82,7 +107,7 @@ export default function Level_9({ onNext }) {
       <div className="border-1 rounded-2xl bg-[#1a1a1a] border-gray-300 mx-auto w-115 h-151 shadow-2xl mt-5">
         <div className="bg-[#2a2a2a] m-3 pl-3 pt-1 h-18 text-neutral-50">
           <p>Текст</p>
-          <h3 className="font-bold text-2xl">Текст</h3>
+          <h3 className="font-bold text-2xl">Уровень {levelNumber}</h3>
         </div>
 
         <div className="ml-6 mr-5 my-1.5 h-105 w-105 grid grid-cols-5 grid-rows-5">
@@ -99,9 +124,7 @@ export default function Level_9({ onNext }) {
         <div className="border-b-neutral-200 bg-[#222222] mx-1.5 p-1 h-16 flex flex-row-reverse items-center">
           <button
             className="h-10 w-25 bg-[#333333] rounded-xl text-neutral-50"
-            onClick={() => {
-              // Optional: Add logic for final check if needed
-            }}
+            onClick={() => {}}
           >
             Проверить
           </button>
